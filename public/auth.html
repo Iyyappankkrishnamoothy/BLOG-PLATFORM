@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login / Register — BlogSpace</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <a href="index.html" class="logo">📝 BlogSpace</a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+    </div>
+  </nav>
+
+  <!-- AUTH BOX -->
+  <div class="auth-wrapper">
+    <div class="auth-box">
+
+      <!-- TABS -->
+      <div class="auth-tabs">
+        <button class="tab-btn active" onclick="showTab('login')">Login</button>
+        <button class="tab-btn" onclick="showTab('register')">Register</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <div id="loginTab">
+        <h2>Welcome Back 👋</h2>
+        <p class="auth-sub">Login to your account</p>
+        <div id="loginMsg" class="msg"></div>
+
+        <label>Username</label>
+        <input type="text" id="loginUsername" placeholder="Enter username" />
+
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="Enter password" />
+
+        <button class="btn full-btn" onclick="login()">Login</button>
+        <p class="switch-text">Don't have an account? 
+          <span onclick="showTab('register')">Register here</span>
+        </p>
+      </div>
+
+      <!-- REGISTER FORM -->
+      <div id="registerTab" style="display:none">
+        <h2>Create Account 🚀</h2>
+        <p class="auth-sub">Join BlogSpace today</p>
+        <div id="registerMsg" class="msg"></div>
+
+        <label>Username</label>
+        <input type="text" id="regUsername" placeholder="Choose a username" />
+
+        <label>Password</label>
+        <input type="password" id="regPassword" placeholder="Choose a password" />
+
+        <button class="btn full-btn" onclick="register()">Register</button>
+        <p class="switch-text">Already have an account? 
+          <span onclick="showTab('login')">Login here</span>
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // Redirect if already logged in
+    if (localStorage.getItem('token')) {
+      window.location.href = 'index.html';
+    }
+
+    function showTab(tab) {
+      document.getElementById('loginTab').style.display = tab === 'login' ? 'block' : 'none';
+      document.getElementById('registerTab').style.display = tab === 'register' ? 'block' : 'none';
+      document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', (tab === 'login' && i === 0) || (tab === 'register' && i === 1));
+      });
+    }
+
+    async function login() {
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+      const msg = document.getElementById('loginMsg');
+
+      if (!username || !password) {
+        return showMsg(msg, 'Please fill all fields', 'error');
+      }
+
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('username', data.username);
+        showMsg(msg, 'Login successful! Redirecting...', 'success');
+        setTimeout(() => window.location.href = 'index.html', 1000);
+      } else {
+        showMsg(msg, data.error, 'error');
+      }
+    }
+
+    async function register() {
+      const username = document.getElementById('regUsername').value.trim();
+      const password = document.getElementById('regPassword').value.trim();
+      const msg = document.getElementById('registerMsg');
+
+      if (!username || !password) {
+        return showMsg(msg, 'Please fill all fields', 'error');
+      }
+
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        showMsg(msg, 'Registered! Please login now.', 'success');
+        setTimeout(() => showTab('login'), 1500);
+      } else {
+        showMsg(msg, data.error, 'error');
+      }
+    }
+
+    function showMsg(el, text, type) {
+      el.textContent = text;
+      el.className = 'msg ' + type;
+    }
+  </script>
+</body>
+</html>

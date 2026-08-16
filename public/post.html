@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Post — BlogSpace</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <a href="index.html" class="logo">📝 BlogSpace</a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <span id="navUser"></span>
+      <a href="create.html" id="newPostBtn" style="display:none">New Post</a>
+      <button onclick="logout()" id="logoutBtn" style="display:none">Logout</button>
+    </div>
+  </nav>
+
+  <!-- POST CONTENT -->
+  <div class="container post-detail">
+
+    <div id="postContent">
+      <p>Loading post...</p>
+    </div>
+
+    <!-- COMMENT SECTION -->
+    <div class="comment-section" id="commentSection" style="display:none">
+      <h3>💬 Comments</h3>
+
+      <!-- Add Comment -->
+      <div id="commentFormArea" style="display:none">
+        <div class="comment-form">
+          <textarea id="commentText" placeholder="Write a comment..."></textarea>
+          <button class="btn" onclick="addComment()">Post Comment</button>
+        </div>
+      </div>
+      <p id="loginToComment" style="display:none">
+        <a href="auth.html">Login</a> to leave a comment.
+      </p>
+
+      <div id="commentsList"></div>
+    </div>
+
+  </div>
+
+  <footer>
+    <p>© 2025 BlogSpace — Built for THIRANEX Internship Task 4</p>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const postId = params.get('id');
+    const token = localStorage.getItem('token');
+    const username = localStorage.getItem('username');
+
+    // Update navbar
+    function updateNav() {
+      if (token && username) {
+        document.getElementById('navUser').textContent = '👤 ' + username;
+        document.getElementById('newPostBtn').style.display = 'inline';
+        document.getElementById('logoutBtn').style.display = 'inline';
+      }
+    }
+
+    // Load post
+    async function loadPost() {
+      if (!postId) {
+        document.getElementById('postContent').innerHTML = '<p>Post not found.</p>';
+        return;
+      }
+
+      const res = await fetch('/api/posts/' + postId);
+      if (!res.ok) {
+        document.getElementById('postContent').innerHTML = '<p>Post not found.</p>';
+        return;
+      }
+
+      const post = await res.json();
+      const isAuthor = token && username === post.author;
+
+      document.getElementById('postContent').innerHTML = `
+        <div class="post-header">
+          <h1>${post.title}</h1>
+          <div class="post-meta">
+            <span>✍️ ${post.author}</span>
+            <span>📅 ${new Date(post.createdAt).toLocaleDateString()}</span>
+            ${post.updatedAt ? `<span>✏️ Edited ${new Date(post.updatedAt).toLocaleDateString()}</span>` : ''}
+          </div>
+          ${isAuthor ? `
+            <div class="post-actions">
+              <a href="create.html?id=${post.id}" class="btn btn-sm">✏️ Edit</a>
+              <button class="btn btn-sm btn-danger" onclick="deletePost('${post.id}')">🗑️ Delete</button>
+            </div>
+          ` : ''}
+        </div>
+        <div class="post-body">${post.content.replace(/\n/g, '<br/>')}</div>
+      `;
+
+      // Show comments
+      document.getElementById('commentSection').style.display = 'block';
+
+      if (token) {
+        document.getElementById('commentFormArea').style.display = 'block';
+      } else {
+        document.getElementById('loginToComment').style.display = 'block';
+      }
+
+      renderComments(post.comments);
+    }
+
+    // Render comments
+    function renderComments(comments) {
+      const list = document.getElementById('commentsList');
+      if (comments.length === 0) {
+        list.innerHTML = '<p class="no-comments">No comments yet. Be the first!</p>';
+        return;
+      }
+      list.innerHTML = comments.map(c => `
+        <div class="comment-card">
+          <div class="comment-top">
+            <strong>👤 ${c.author}</strong>
+            <span>${new Date(c.createdAt).toLocaleDateString()}</span>
+            ${(token && username === c.author) ? `
+              <button class="btn-delete-comment" onclick="deleteComment('${c.id}')">🗑️</button>
+            ` : ''}
+          </div>
+          <p>${c.text}</p>
+        </div>
+      `).join('');
+    }
+
+    // Add comment
+    async function addComment() {
+      const text = document.getElementById('commentText').value.trim();
+      if (!text) return alert('Please write something!');
+
+      const res = await fetch('/api/posts/' + postId + '/comments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token
+        },
+        body: JSON.stringify({ text })
+      });
+
+      if (res.ok) {
+        document.getElementById('commentText').value = '';
+        loadPost();
+      } else {
+        alert('Failed to post comment.');
+      }
+    }
+
+    // Delete comment
+    async function deleteComment(commentId) {
+      if (!confirm('Delete this comment?')) return;
+      const res = await fetch('/api/posts/' + postId + '/comments/' + commentId, {
+        method: 'DELETE',
+        headers: { 'Authorization': token }
+      });
+      if (res.ok) loadPost();
+    }
+
+    // Delete post
+    async function deletePost(id) {
+      if (!confirm('Delete this post? This cannot be undone.')) return;
+      const res = await fetch('/api/posts/' + id, {
+        method: 'DELETE',
+        headers: { 'Authorization': token }
+      });
+      if (res.ok) window.location.href = 'index.html';
+    }
+
+    updateNav();
+    loadPost();
+  </script>
+</body>
+</html>

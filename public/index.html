@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Blog Platform</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <a href="index.html" class="logo">📝 BlogSpace</a>
+    <div class="nav-links" id="navLinks">
+      <a href="index.html">Home</a>
+      <span id="navUser"></span>
+      <a href="create.html" id="newPostBtn" style="display:none">New Post</a>
+      <a href="auth.html" id="loginBtn">Login</a>
+      <button onclick="logout()" id="logoutBtn" style="display:none">Logout</button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1>Welcome to BlogSpace</h1>
+    <p>Read, write, and share your thoughts with the world.</p>
+    <a href="auth.html" id="heroBtn" class="btn">Get Started</a>
+  </div>
+
+  <!-- POSTS SECTION -->
+  <div class="container">
+    <h2 class="section-title">Latest Posts</h2>
+    <div id="postsGrid" class="posts-grid">
+      <p>Loading posts...</p>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2025 BlogSpace — Built for THIRANEX Internship Task 4</p>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    // Update navbar based on login
+    function updateNav() {
+      const user = localStorage.getItem('username');
+      const token = localStorage.getItem('token');
+      if (user && token) {
+        document.getElementById('navUser').textContent = '👤 ' + user;
+        document.getElementById('newPostBtn').style.display = 'inline';
+        document.getElementById('loginBtn').style.display = 'none';
+        document.getElementById('logoutBtn').style.display = 'inline';
+        document.getElementById('heroBtn').textContent = 'Write a Post';
+        document.getElementById('heroBtn').href = 'create.html';
+      }
+    }
+
+    // Load all posts
+    async function loadPosts() {
+      const res = await fetch('/api/posts');
+      const posts = await res.json();
+      const grid = document.getElementById('postsGrid');
+
+      if (posts.length === 0) {
+        grid.innerHTML = '<p class="no-posts">No posts yet. Be the first to write one!</p>';
+        return;
+      }
+
+      grid.innerHTML = posts.map(post => `
+        <div class="post-card" onclick="location.href='post.html?id=${post.id}'">
+          <h3>${post.title}</h3>
+          <p>${post.content.substring(0, 120)}${post.content.length > 120 ? '...' : ''}</p>
+          <div class="post-meta">
+            <span>✍️ ${post.author}</span>
+            <span>💬 ${post.comments.length} comments</span>
+            <span>📅 ${new Date(post.createdAt).toLocaleDateString()}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    updateNav();
+    loadPosts();
+  </script>
+</body>
+</html>
